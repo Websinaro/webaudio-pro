@@ -14,7 +14,7 @@ Package/applicationId: `com.weaudio.pro`.
 
 ## Requirements
 Android Studio (Ladybug or newer), JDK 17, Android SDK 35, NDK (any recent; Studio offers to install), CMake 3.22.1 (SDK Manager → SDK Tools). Gradle 8.13 via the wrapper.
-Dependencies are pinned in `gradle/libs.versions.toml`: AGP 8.12.0, Kotlin 1.9.24, Compose compiler 1.5.14, Compose BOM 2024.04.01, Lifecycle 2.8.7, Navigation 2.7.7, Coroutines 1.8.1, **Oboe 1.9.0** (Maven AAR via prefab). minSdk 26.
+Dependencies are pinned in `gradle/libs.versions.toml`: AGP 8.12.0, Kotlin 1.9.24, Compose compiler 1.5.14, Compose BOM 2024.04.01, Lifecycle 2.8.7, Navigation 2.7.7, Coroutines 1.8.1, **Oboe 1.9.0** (Maven AAR via prefab). minSdk 24 (Android 7.0+); Oboe chooses a compatible native backend on older Android releases.
 
 ## Build and run
 ```

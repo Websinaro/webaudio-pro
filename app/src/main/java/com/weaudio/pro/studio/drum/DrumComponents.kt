@@ -22,6 +22,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.weaudio.pro.audio.keyboard.KeyMap
 import com.weaudio.pro.audio.sampler.DrumInstrument
 import com.weaudio.pro.ui.components.DawTextButton
@@ -74,8 +75,10 @@ fun DrumPad(
     ) {
         Text(keyLabel ?: "–", style = DawType.Label, color = DawColors.TextSecondary, modifier = Modifier.align(Alignment.TopEnd).padding(6.dp))
         Column(Modifier.align(Alignment.BottomStart).padding(8.dp)) {
-            Text(state.instrument.label.uppercase(), style = DawType.Label,
-                color = if (usable && !state.muted) DawColors.TextPrimary else DawColors.TextDisabled, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(state.instrument.label.uppercase(),
+                style = DawType.Label.copy(fontSize = 10.sp, lineHeight = 12.sp, letterSpacing = 0.35.sp),
+                color = if (usable && !state.muted) DawColors.TextPrimary else DawColors.TextDisabled,
+                maxLines = 2, overflow = TextOverflow.Ellipsis)
             if (label.isNotEmpty()) Text(label, style = DawType.Label,
                 color = if (state.status == SampleStatus.ERROR) DawColors.Error else DawColors.Warning)
         }
@@ -196,15 +199,28 @@ fun InstrumentList(ui: DrumUiState, vm: DrumViewModel, modifier: Modifier = Modi
 /** Real values only: loaded count from the sampler state, voices / xruns / buffer from native diagnostics. */
 @Composable
 fun StatusStrip(ui: DrumUiState, voices: String, xruns: String, buffer: String, engine: String, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth().background(DawColors.Panel).padding(horizontal = 10.dp, vertical = 5.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        val loading = if (ui.kitLoading) "LOADING ${ui.loadedCount}/${DrumInstrument.entries.size}" else "SAMPLES ${ui.loadedCount}/${DrumInstrument.entries.size}"
-        Text(loading, style = DawType.Label, color = if (ui.loadedCount == DrumInstrument.entries.size) DawColors.TextSecondary else DawColors.Warning, modifier = Modifier.testTag("samples_status"))
-        Text("VOICES $voices", style = DawType.Label, color = DawColors.TextSecondary)
-        Text("XRUNS $xruns", style = DawType.Label, color = DawColors.TextSecondary)
-        Text("BUF $buffer", style = DawType.Label, color = DawColors.TextSecondary)
-        Text(if (ui.keyboardConnected) "KEYBOARD ON" else "NO KEYBOARD", style = DawType.Label, color = if (ui.keyboardConnected) DawColors.Accent else DawColors.TextDisabled, modifier = Modifier.testTag("keyboard_status"))
-        Spacer(Modifier.weight(1f))
-        Text(engine, style = DawType.Label, color = DawColors.TextSecondary)
+    // A single-line horizontally scrollable console prevents status labels wrapping
+    // into narrow vertical stacks on small portrait displays.
+    Row(
+        modifier.fillMaxWidth()
+            .background(DawColors.Panel)
+            .horizontalScroll(androidx.compose.foundation.rememberScrollState())
+            .padding(horizontal = 9.dp, vertical = 7.dp),
+        horizontalArrangement = Arrangement.spacedBy(13.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val sampleLabel = if (ui.kitLoading) "LOADING ${ui.loadedCount}/${DrumInstrument.entries.size}"
+            else "SAMPLES ${ui.loadedCount}/${DrumInstrument.entries.size}"
+        Text(sampleLabel, style = DawType.Label,
+            color = if (ui.loadedCount == DrumInstrument.entries.size) DawColors.TextSecondary else DawColors.Warning,
+            modifier = Modifier.testTag("samples_status"), maxLines = 1, softWrap = false)
+        Text("VOICES $voices", style = DawType.Label, color = DawColors.TextSecondary, maxLines = 1, softWrap = false)
+        Text("XRUNS $xruns", style = DawType.Label, color = DawColors.TextSecondary, maxLines = 1, softWrap = false)
+        Text("BUF $buffer", style = DawType.Label, color = DawColors.TextSecondary, maxLines = 1, softWrap = false)
+        Text(if (ui.keyboardConnected) "KEYBOARD ON" else "NO KEYBOARD", style = DawType.Label,
+            color = if (ui.keyboardConnected) DawColors.Accent else DawColors.TextDisabled,
+            modifier = Modifier.testTag("keyboard_status"), maxLines = 1, softWrap = false)
+        Text(engine, style = DawType.Label, color = DawColors.TextSecondary, maxLines = 1, softWrap = false)
     }
 }
 

@@ -50,8 +50,11 @@ fun DrumWorkspace(drums: DrumViewModel, audio: AudioViewModel, landscape: Boolea
                 modifier = Modifier.fillMaxWidth().background(DawColors.Raised).padding(horizontal = 10.dp, vertical = 5.dp).testTag("audio_not_running"))
         }
         if (landscape) {
-            Row(Modifier.weight(1f).fillMaxWidth()) {
-                Column(Modifier.width(196.dp).fillMaxHeight().background(DawColors.Panel).verticalScroll(rememberScrollState())) {
+            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+                val browserWidth = (maxWidth * 0.19f).coerceIn(164.dp, 218.dp)
+                val inspectorWidth = (maxWidth * 0.22f).coerceIn(208.dp, 268.dp)
+                Row(Modifier.fillMaxSize()) {
+                Column(Modifier.width(browserWidth).fillMaxHeight().background(DawColors.Panel).verticalScroll(rememberScrollState())) {
                     Text("KIT", style = DawType.Label, color = DawColors.TextSecondary, modifier = Modifier.padding(10.dp, 8.dp, 10.dp, 4.dp))
                     KitSelector(ui, drums, Modifier.padding(horizontal = 8.dp))
                     Text("INSTRUMENTS", style = DawType.Label, color = DawColors.TextSecondary, modifier = Modifier.padding(10.dp, 12.dp, 10.dp, 4.dp))
@@ -60,7 +63,8 @@ fun DrumWorkspace(drums: DrumViewModel, audio: AudioViewModel, landscape: Boolea
                 VBar()
                 PadGrid(ui, pressed, columns = 4, vm = drums, modifier = Modifier.weight(1f).fillMaxHeight())
                 VBar()
-                InstrumentInspector(ui, drums, importer, Modifier.width(236.dp).fillMaxHeight().background(DawColors.Panel).verticalScroll(rememberScrollState()))
+                InstrumentInspector(ui, drums, importer, Modifier.width(inspectorWidth).fillMaxHeight().background(DawColors.Panel).verticalScroll(rememberScrollState()))
+                }
             }
         } else {
             PadGrid(ui, pressed, columns = 3, vm = drums, modifier = Modifier.weight(1f).fillMaxWidth())
@@ -73,7 +77,7 @@ fun DrumWorkspace(drums: DrumViewModel, audio: AudioViewModel, landscape: Boolea
                     Text("INSTRUMENT SETTINGS — ${ui.selected.label.uppercase()}", style = DawType.Label, color = DawColors.TextSecondary, modifier = Modifier.weight(1f))
                     Text(if (expanded) "HIDE" else "SHOW", style = DawType.Label, color = DawColors.Accent)
                 }
-                if (expanded) InstrumentInspector(ui, drums, importer, Modifier.heightIn(max = 250.dp).verticalScroll(rememberScrollState()))
+                if (expanded) InstrumentInspector(ui, drums, importer, Modifier.heightIn(max = 228.dp).verticalScroll(rememberScrollState()))
             }
         }
         strip()
