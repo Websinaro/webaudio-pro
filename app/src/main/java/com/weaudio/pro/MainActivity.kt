@@ -31,6 +31,45 @@ class MainActivity : ComponentActivity() {
     private val drums: DrumViewModel by viewModels { DrumViewModel.factory(applicationContext) }
     private val arrangement: com.weaudio.pro.arrangement.ArrangementViewModel by viewModels { com.weaudio.pro.arrangement.ArrangementViewModel.factory() }
     private lateinit var focus: AudioFocusController
+    private var crashScreenShown = false
+
+    // ---- crash reporter: saves the stack trace, shows it (copyable) on the next launch ----
+    private fun crashFile() = java.io.File(filesDir, "last_crash.txt")
+    private fun installCrashReporter() {
+        val prev = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { t, e ->
+            try { crashFile().writeText(android.util.Log.getStackTraceString(e)) } catch (_: Throwable) {}
+            prev?.uncaughtException(t, e)
+        }
+    }
+    private fun showCrashReportIfAny(): Boolean {
+        val f = crashFile()
+        if (!f.exists()) return false
+        val report = try { f.readText() } catch (_: Throwable) { return false }
+        val tv = android.widget.TextView(this).apply {
+            text = report; textSize = 11f; setTextIsSelectable(true); setTextColor(0xFFFFFFFF.toInt()); setPadding(24, 24, 24, 24)
+        }
+        val copy = android.widget.Button(this).apply {
+            text = "Copy crash report"
+            setOnClickListener {
+                val cm = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                cm.setPrimaryClip(android.content.ClipData.newPlainText("crash", report))
+            }
+        }
+        val retry = android.widget.Button(this).apply {
+            text = "Clear report and try again"
+            setOnClickListener { f.delete(); recreate() }
+        }
+        val col = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setBackgroundColor(0xFF111111.toInt()); setPadding(24, 120, 24, 24)
+            addView(copy); addView(retry)
+            addView(android.widget.ScrollView(this@MainActivity).apply { addView(tv) })
+        }
+        setContentView(col)
+        crashScreenShown = true
+        return true
+    }
 
     private val inputListener = object : InputManager.InputDeviceListener {
         override fun onInputDeviceAdded(deviceId: Int) = refreshKeyboardState()
@@ -52,6 +91,7 @@ class MainActivity : ComponentActivity() {
     // Physical keyboard -> drum sampler. Runs before Compose sees the event; consumed only when a
     // mapped drum key is pressed while the Studio is focused (otherwise normal key handling continues).
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (crashScreenShown) return super.dispatchKeyEvent(event)
         val device = event.device
         val physical = device != null && !device.isVirtual && (event.source and InputDevice.SOURCE_KEYBOARD) == InputDevice.SOURCE_KEYBOARD
         val input = KeyInput(
@@ -65,11 +105,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        drums.setWindowFocused(hasFocus)
+        if (!crashScreenShown) drums.setWindowFocused(hasFocus)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        installCrashReporter()
+        if (showCrashReportIfAny()) return
         enableEdgeToEdge()
 
         focus = AudioFocusController(this) { event ->
