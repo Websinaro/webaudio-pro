@@ -33,4 +33,18 @@ internal object NativeAudioBridge {
     external fun drumSetMuted(slot: Int, muted: Boolean)
     external fun drumIsLoaded(slot: Int): Boolean
     external fun drumActiveVoices(): Int
+
+    // Sequencer / musical transport (cpp/jni/NativeAudioBridge.cpp)
+    external fun seqPublish(ticks: LongArray, tracks: IntArray, slots: IntArray, velocities: FloatArray, pitches: FloatArray,
+                            lengthTicks: Long, loop: Boolean, loopStart: Long, loopEnd: Long): Boolean
+    external fun seqPlay()
+    external fun seqPause()
+    external fun seqStop()
+    external fun seqSeek(tick: Long)
+    external fun seqSetTempo(bpm: Double)
+    external fun seqSetTimeSignature(numerator: Int, denominator: Int)
+    external fun seqSetTrack(index: Int, volume: Float, pan: Float, mute: Boolean, solo: Boolean)
+    external fun seqPositionTicks(): Long
+    external fun seqState(): Int
+    external fun seqDroppedHits(): Long
 }

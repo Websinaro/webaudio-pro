@@ -10,6 +10,7 @@
 #include "engine/AudioClock.h"
 #include "engine/AudioProcessor.h"
 #include "engine/MasterOutput.h"
+#include "engine/Sequencer.h"
 #include "sampler/DrumSampler.h"
 
 namespace weaudio {
@@ -20,8 +21,9 @@ class AudioEngine final : public StreamErrorListener,
                           public std::enable_shared_from_this<AudioEngine> {
 public:
     // The sampler is owned by the JNI layer so loaded kits survive engine re-initialisation.
-    explicit AudioEngine(std::shared_ptr<DrumSampler> drums = std::make_shared<DrumSampler>())
-        : drums_(std::move(drums)) {}
+    explicit AudioEngine(std::shared_ptr<DrumSampler> drums = std::make_shared<DrumSampler>(),
+                         std::shared_ptr<Sequencer> sequencer = std::make_shared<Sequencer>())
+        : drums_(std::move(drums)), sequencer_(std::move(sequencer)) {}
     ~AudioEngine() override;
 
     // Return true on success; on failure lastError() explains why.
@@ -43,6 +45,7 @@ public:
     int64_t positionFrames() const { return clock_.frames(); }
     float peakLevel() const { return master_.peak(); }
     DrumSampler& drums() { return *drums_; }
+    Sequencer& sequencer() { return *sequencer_; }
 
     // StreamErrorListener (called on an Oboe worker thread)
     void onStreamDisconnected(oboe::Result error) override;
@@ -56,6 +59,7 @@ private:
     std::mutex mutex_;
     AudioProcessor processor_;
     std::shared_ptr<DrumSampler> drums_;
+    std::shared_ptr<Sequencer> sequencer_;   // owned with the sampler: arrangement/position survive re-init
     MasterOutput master_;
     AudioClock clock_;
     std::shared_ptr<AudioCallback> callback_;

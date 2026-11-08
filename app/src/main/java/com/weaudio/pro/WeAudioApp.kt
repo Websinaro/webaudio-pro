@@ -41,7 +41,7 @@ import com.weaudio.pro.ui.theme.DawType
 import com.weaudio.pro.ui.upcoming.UpcomingScreen
 
 @Composable
-fun WeAudioApp(audio: AudioViewModel, drums: DrumViewModel) {
+fun WeAudioApp(audio: AudioViewModel, drums: DrumViewModel, arrangement: com.weaudio.pro.arrangement.ArrangementViewModel) {
     val nav = rememberNavController()
     val projectVm: ProjectViewModel = viewModel()
     val project by projectVm.project.collectAsStateWithLifecycle()
@@ -64,7 +64,7 @@ fun WeAudioApp(audio: AudioViewModel, drums: DrumViewModel) {
                 }
                 Box(Modifier.weight(1f)) {
                     NavHost(nav, startDestination = Destination.Studio.route) {
-                        composable(Destination.Studio.route) { StudioScreen(project, audio, drums, landscape) }
+                        composable(Destination.Studio.route) { StudioScreen(project, audio, drums, arrangement, landscape) }
                         composable(Destination.Sounds.route) { SoundsScreen(drums) }
                         composable(Destination.Mixer.route) {
                             UpcomingScreen("Mixer", 4, "Channel strips, EQ, reverb, delay and WAV rendering.")
@@ -122,7 +122,7 @@ private fun StudioTopBar(projectName: String, saved: Boolean, nav: NavHostContro
             DropdownMenu(menu, { menu = false }, Modifier.background(DawColors.Raised)) {
                 DropdownMenuItem(text = { Text("Project info") }, onClick = { menu = false; nav.navigateTop(Destination.Projects.route) })
                 DropdownMenuItem(text = { Text("Audio diagnostics") }, onClick = { menu = false; nav.navigate(ROUTE_DIAGNOSTICS) })
-                DropdownMenuItem(text = { Text("Save project (Phase 3)") }, onClick = {}, enabled = false)
+                DropdownMenuItem(text = { Text("Save project (Phase 4)") }, onClick = {}, enabled = false)
                 DropdownMenuItem(text = { Text("Render WAV (Phase 4)") }, onClick = {}, enabled = false)
             }
         }

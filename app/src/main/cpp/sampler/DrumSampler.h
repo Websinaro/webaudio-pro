@@ -6,6 +6,7 @@
 #include <string>
 
 #include "sampler/DrumVoice.h"
+#include "sampler/ScheduledHit.h"
 #include "sampler/SampleBuffer.h"
 #include "sampler/SampleDecoder.h"
 #include "sampler/SpscRing.h"
@@ -64,6 +65,9 @@ public:
     // ---- audio thread -----------------------------------------------------------------
     // Adds the drum mix into `out` (does not clear it).
     void render(float* out, int32_t frames, int32_t channels) noexcept;
+    // Same as render(), but starts `hits` (sorted by offset) at their exact frame offsets inside the
+    // block by rendering the block in segments. Real-time safe; hits for unloaded slots are skipped.
+    void renderWithHits(float* out, int32_t frames, int32_t channels, const ScheduledHit* hits, int32_t hitCount) noexcept;
 
     // ---- stats (atomics, any thread) --------------------------------------------------
     int activeVoices() const { return activeVoices_.load(std::memory_order_relaxed); }
@@ -83,7 +87,7 @@ private:
     bool pushControl(const Command& c);
     void drainOffline();
     void drainCommands() noexcept;
-    void startVoice(int slot, float velocity) noexcept;
+    void startVoice(int slot, float velocity, float panL = 1.0f, float panR = 1.0f, float pitchOffset = 0.0f) noexcept;
     DrumVoice* allocateVoice() noexcept;
     void fadeOut(DrumVoice& v) noexcept;
     void mix(float* out, int32_t frames, int32_t channels) noexcept;

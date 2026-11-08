@@ -10,6 +10,8 @@ struct DrumVoice {
     double pos = 0.0;          // fractional read position, in frames
     float ratio = 1.0f;        // pitch ratio (frames advanced per output frame)
     float velocity = 1.0f;
+    float panL = 1.0f;         // per-hit channel gains (sequencer track pan); 1/1 for pad hits
+    float panR = 1.0f;
     float gain = 0.0f;         // smoothed linear gain (per-block ramp)
     uint64_t order = 0;        // allocation order, for stealing
     int32_t instrument = -1;

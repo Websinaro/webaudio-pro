@@ -1,0 +1,45 @@
+ok:   120 BPM @48k = exactly 25 frames/tick
+ok:   tempo-to-frames @90 BPM/44.1k
+ok:   ticks per beat by denominator
+ok:   ticks per bar
+ok:   tick -> bar/beat (4/4)
+ok:   tick -> bar/beat (6/8)
+ok:   16 sixteenths = one 4/4 bar
+ok:   quantize to nearest grid
+ok:   sample-accurate hit frames, block=64
+ok:   sample-accurate hit frames, block=192
+ok:   sample-accurate hit frames, block=300
+ok:   sample-accurate hit frames, block=480
+ok:   sample-accurate hit frames, block=1024
+ok:   audio onset is at sample 24000 (inside a 300-frame block)
+ok:   6 tracks + duplicate events trigger on the same sample
+ok:   same-track simultaneous events all trigger
+ok:   events at/after arrangement end never fire
+ok:   auto-stop at arrangement end, position reset
+ok:   loop region repeats with exact bar-length period
+ok:   looping transport keeps playing
+ok:   no drift after many loops
+ok:   loop region wraps to loop start (not to 0)
+ok:   pause produces no hits
+ok:   pause preserves position (1200 ticks)
+ok:   resume continues exactly where pause stopped
+ok:   stop resets position to 0 immediately
+ok:   restart plays from bar 1
+ok:   seek sets position; next event is the one at the seek point
+ok:   pause while stopped is ignored
+ok:   tempo change: remaining events still fire once
+ok:   tempo change: next beat arrives at the new tempo (sub-frame exact)
+ok:   tempo change: beat spacing halves at 240 BPM
+ok:   live arrangement edit: latest snapshot used, no duplicates
+ok:   oversized arrangement rejected, old one kept
+ok:   mute silences only that track
+ok:   solo plays only soloed track
+ok:   mute wins over solo on the same track
+ok:   track volume scales hit velocity
+ok:   centre pan is unity on both channels
+ok:   hard pan routes to one channel
+ok:   hard-left pan: right output silent
+ok:   process()+renderWithHits() perform zero heap allocations
+ok:   arrangement edits racing the audio thread never expose torn snapshots
+
+ALL SEQUENCER TESTS PASSED

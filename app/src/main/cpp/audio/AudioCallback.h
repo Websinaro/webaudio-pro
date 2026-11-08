@@ -7,6 +7,7 @@
 #include "engine/AudioClock.h"
 #include "engine/AudioProcessor.h"
 #include "engine/MasterOutput.h"
+#include "engine/Sequencer.h"
 #include "sampler/DrumSampler.h"
 
 namespace weaudio {
@@ -23,9 +24,9 @@ public:
 class AudioCallback final : public oboe::AudioStreamDataCallback,
                             public oboe::AudioStreamErrorCallback {
 public:
-    AudioCallback(AudioProcessor& processor, DrumSampler& drums, MasterOutput& master, AudioClock& clock,
+    AudioCallback(AudioProcessor& processor, DrumSampler& drums, Sequencer& sequencer, MasterOutput& master, AudioClock& clock,
                   std::weak_ptr<StreamErrorListener> listener)
-        : processor_(processor), drums_(drums), master_(master), clock_(clock), listener_(std::move(listener)) {}
+        : processor_(processor), drums_(drums), sequencer_(sequencer), master_(master), clock_(clock), listener_(std::move(listener)) {}
 
     oboe::DataCallbackResult onAudioReady(oboe::AudioStream* stream, void* audioData,
                                           int32_t numFrames) override;
@@ -37,6 +38,8 @@ public:
 private:
     AudioProcessor& processor_;
     DrumSampler& drums_;
+    Sequencer& sequencer_;
+    ScheduledHit hits_[Sequencer::kMaxHitsPerBlock];   // preallocated: the callback never allocates
     MasterOutput& master_;
     AudioClock& clock_;
     std::weak_ptr<StreamErrorListener> listener_;

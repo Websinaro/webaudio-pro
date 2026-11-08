@@ -192,7 +192,7 @@ DrumVoice* DrumSampler::allocateVoice() noexcept {
     return oldest;
 }
 
-void DrumSampler::startVoice(int slot, float velocity) noexcept {
+void DrumSampler::startVoice(int slot, float velocity, float panL, float panR, float pitchOffset) noexcept {
     const SampleBuffer* buf = slots_[size_t(slot)];
     if (buf == nullptr || buf->frames <= 0) return;
     const int group = chokeGroup_[size_t(slot)];
@@ -204,7 +204,9 @@ void DrumSampler::startVoice(int slot, float velocity) noexcept {
     v->buffer = buf;
     v->instrument = slot;
     v->velocity = velocity;
-    v->ratio = std::exp2(p.pitch.load(std::memory_order_relaxed) / 12.0f);
+    v->ratio = std::exp2((p.pitch.load(std::memory_order_relaxed) + pitchOffset) / 12.0f);
+    v->panL = panL;
+    v->panR = panR;
     v->gain = velocity * p.volume.load(std::memory_order_relaxed) * kHeadroom;
     v->order = ++orderCounter_;
     v->active = true;
@@ -241,7 +243,7 @@ void DrumSampler::mix(float* out, int32_t frames, int32_t channels) noexcept {
                 if (v.fadeGain <= 0.0f) { alive = false; break; }
                 env *= v.fadeGain;
             }
-            l *= env; r *= env;
+            l *= env * v.panL; r *= env * v.panR;
             float* o = out + size_t(i) * size_t(channels);
             if (channels == 1) o[0] += 0.5f * (l + r);
             else { o[0] += l; o[1] += r; }
@@ -260,6 +262,26 @@ void DrumSampler::render(float* out, int32_t frames, int32_t channels) noexcept 
     if (consumer_.test_and_set(std::memory_order_acquire)) return;  // control thread mid-handover: skip, never wait
     drainCommands();
     mix(out, frames, channels);
+    consumer_.clear(std::memory_order_release);
+}
+
+void DrumSampler::renderWithHits(float* out, int32_t frames, int32_t channels, const ScheduledHit* hits, int32_t hitCount) noexcept {
+    if (out == nullptr || frames <= 0 || channels <= 0) return;
+    if (consumer_.test_and_set(std::memory_order_acquire)) return;
+    drainCommands();
+    int32_t cursor = 0;
+    for (int32_t i = 0; i < hitCount; ++i) {
+        const ScheduledHit& h = hits[i];
+        const int32_t at = std::clamp(h.offset, cursor, frames - 1);
+        if (at > cursor) {   // render up to the hit, so the new voice starts exactly at `at`
+            mix(out + size_t(cursor) * size_t(channels), at - cursor, channels);
+            cursor = at;
+        }
+        if (validSlot(h.slot) && !params_[size_t(h.slot)].muted.load(std::memory_order_relaxed)) {
+            startVoice(h.slot, std::min(h.velocity, 2.0f), h.panL, h.panR, h.pitch);
+        }
+    }
+    if (cursor < frames) mix(out + size_t(cursor) * size_t(channels), frames - cursor, channels);
     consumer_.clear(std::memory_order_release);
 }
 

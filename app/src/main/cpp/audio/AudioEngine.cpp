@@ -34,7 +34,7 @@ bool AudioEngine::initialize() {
     if (initialized_) return true;
     failed_ = false;
     lastError_.clear();
-    callback_ = std::make_shared<AudioCallback>(processor_, *drums_, master_, clock_,
+    callback_ = std::make_shared<AudioCallback>(processor_, *drums_, *sequencer_, master_, clock_,
                                                 std::weak_ptr<StreamErrorListener>(weak_from_this()));
     stream_ = std::make_unique<AudioStreamManager>(callback_);
     if (!openStreamLocked()) {
@@ -110,7 +110,8 @@ bool AudioEngine::stop() {
         fail("Unable to stop the audio stream");
         return false;
     }
-    clock_.reset();  // transport returns to the start
+    clock_.reset();
+    sequencer_->stop();   // musical transport returns to bar 1
     return true;
 }
 

@@ -16,6 +16,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.weaudio.pro.studio.drum.DrumViewModel
+import com.weaudio.pro.arrangement.ArrangementViewModel
+import com.weaudio.pro.arrangement.ui.ArrangementWorkspace
+import com.weaudio.pro.arrangement.ui.LocalKeyboardGate
+import androidx.compose.runtime.CompositionLocalProvider
 import com.weaudio.pro.studio.drum.DrumWorkspace
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -28,7 +32,7 @@ import com.weaudio.pro.ui.theme.DawColors
 import com.weaudio.pro.ui.theme.DawType
 
 @Composable
-fun StudioScreen(project: Project, audio: AudioViewModel, drums: DrumViewModel, landscape: Boolean) {
+fun StudioScreen(project: Project, audio: AudioViewModel, drums: DrumViewModel, arrangement: ArrangementViewModel, landscape: Boolean) {
     val state by audio.state.collectAsStateWithLifecycle()
     val engine = state.engine
 
@@ -43,13 +47,15 @@ fun StudioScreen(project: Project, audio: AudioViewModel, drums: DrumViewModel, 
         if (!autoStarted && engine == EngineState.STOPPED) { autoStarted = true; audio.play() }
     }
 
+    // Rename/tempo dialogs switch the physical-keyboard drum mapping off so letters can be typed.
+    val gate: (Boolean) -> Unit = { editing -> drums.setStudioVisible(!editing) }
     Column(Modifier.fillMaxSize().background(DawColors.Background)) {
-        TransportPanel(project, audio, engine, compact = landscape)
-        HairlineDivider()
         if (state.error != null) {
             ErrorBanner(state.error!!, onRetry = audio::reinitialize, onDismiss = audio::dismissError)
         }
-        DrumWorkspace(drums, audio, landscape, Modifier.weight(1f))
+        CompositionLocalProvider(LocalKeyboardGate provides gate) {
+            ArrangementWorkspace(arrangement, landscape, pads = { DrumWorkspace(drums, audio, landscape, Modifier.fillMaxSize()) }, modifier = Modifier.weight(1f))
+        }
     }
 }
 

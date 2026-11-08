@@ -6,6 +6,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <vector>
 
 #include "audio/AudioEngine.h"
 
@@ -15,6 +16,7 @@ std::mutex gMutex;
 std::shared_ptr<weaudio::AudioEngine> gEngine;
 // Process-wide sampler: loaded kits survive engine release/re-initialisation.
 std::shared_ptr<weaudio::DrumSampler> gDrums = std::make_shared<weaudio::DrumSampler>();
+std::shared_ptr<weaudio::Sequencer> gSeq = std::make_shared<weaudio::Sequencer>();
 
 std::shared_ptr<weaudio::AudioEngine> engine() {
     std::lock_guard<std::mutex> lock(gMutex);
@@ -31,7 +33,7 @@ JNI_FN(jint, initializeEngine)(JNIEnv*, jobject) {
     std::shared_ptr<weaudio::AudioEngine> e;
     {
         std::lock_guard<std::mutex> lock(gMutex);
-        if (!gEngine) gEngine = std::make_shared<weaudio::AudioEngine>(gDrums);
+        if (!gEngine) gEngine = std::make_shared<weaudio::AudioEngine>(gDrums, gSeq);
         e = gEngine;
     }
     return e->initialize() ? 0 : 1;
@@ -103,3 +105,40 @@ JNI_FN(void, drumSetPitch)(JNIEnv*, jobject, jint slot, jfloat st) { gDrums->set
 JNI_FN(void, drumSetMuted)(JNIEnv*, jobject, jint slot, jboolean m) { gDrums->setMuted(slot, m == JNI_TRUE); }
 JNI_FN(jboolean, drumIsLoaded)(JNIEnv*, jobject, jint slot) { return gDrums->isLoaded(slot) ? JNI_TRUE : JNI_FALSE; }
 JNI_FN(jint, drumActiveVoices)(JNIEnv*, jobject) { return gDrums->activeVoices(); }
+
+// ---- sequencer / musical transport -------------------------------------------------------
+// Arrangement arrives as parallel arrays (flattened, tick-based events); copied into a
+// preallocated native snapshot and published to the audio thread without locks.
+JNI_FN(jboolean, seqPublish)(JNIEnv* env, jobject, jlongArray ticks, jintArray tracks, jintArray slots,
+                             jfloatArray vels, jfloatArray pitches, jlong length, jboolean loop,
+                             jlong loopStart, jlong loopEnd) {
+    const jsize n = env->GetArrayLength(ticks);
+    if (n < 0 || n > weaudio::Sequencer::kMaxEvents || env->GetArrayLength(tracks) != n || env->GetArrayLength(slots) != n ||
+        env->GetArrayLength(vels) != n || env->GetArrayLength(pitches) != n) return JNI_FALSE;
+    std::vector<weaudio::SeqEvent> ev(static_cast<size_t>(n));
+    jlong* t = env->GetLongArrayElements(ticks, nullptr);
+    jint* tr = env->GetIntArrayElements(tracks, nullptr);
+    jint* sl = env->GetIntArrayElements(slots, nullptr);
+    jfloat* ve = env->GetFloatArrayElements(vels, nullptr);
+    jfloat* pi = env->GetFloatArrayElements(pitches, nullptr);
+    for (jsize i = 0; i < n; ++i) ev[size_t(i)] = {t[i], tr[i], sl[i], ve[i], pi[i]};
+    env->ReleaseLongArrayElements(ticks, t, JNI_ABORT);
+    env->ReleaseIntArrayElements(tracks, tr, JNI_ABORT);
+    env->ReleaseIntArrayElements(slots, sl, JNI_ABORT);
+    env->ReleaseFloatArrayElements(vels, ve, JNI_ABORT);
+    env->ReleaseFloatArrayElements(pitches, pi, JNI_ABORT);
+    return gSeq->publish(ev.data(), n, length, loop == JNI_TRUE, loopStart, loopEnd) ? JNI_TRUE : JNI_FALSE;
+}
+JNI_FN(void, seqPlay)(JNIEnv*, jobject) { gSeq->play(); }
+JNI_FN(void, seqPause)(JNIEnv*, jobject) { gSeq->pause(); }
+JNI_FN(void, seqStop)(JNIEnv*, jobject) { gSeq->stop(); gDrums->stopAll(); }
+JNI_FN(void, seqSeek)(JNIEnv*, jobject, jlong tick) { gSeq->seek(tick); }
+JNI_FN(void, seqSetTempo)(JNIEnv*, jobject, jdouble bpm) { gSeq->setTempo(bpm); }
+JNI_FN(void, seqSetTimeSignature)(JNIEnv*, jobject, jint n, jint d) { gSeq->setTimeSignature(n, d); }
+JNI_FN(void, seqSetTrack)(JNIEnv*, jobject, jint idx, jfloat vol, jfloat pan, jboolean mute, jboolean solo) {
+    gSeq->setTrackVolume(idx, vol); gSeq->setTrackPan(idx, pan);
+    gSeq->setTrackMute(idx, mute == JNI_TRUE); gSeq->setTrackSolo(idx, solo == JNI_TRUE);
+}
+JNI_FN(jlong, seqPositionTicks)(JNIEnv*, jobject) { return gSeq->positionTicks(); }
+JNI_FN(jint, seqState)(JNIEnv*, jobject) { return static_cast<jint>(gSeq->state()); }
+JNI_FN(jlong, seqDroppedHits)(JNIEnv*, jobject) { return static_cast<jlong>(gSeq->droppedHits()); }

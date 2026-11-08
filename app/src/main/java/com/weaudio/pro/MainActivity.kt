@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     private val audio: AudioViewModel by viewModels { AudioViewModel.factory(applicationContext) }
     private val drums: DrumViewModel by viewModels { DrumViewModel.factory(applicationContext) }
+    private val arrangement: com.weaudio.pro.arrangement.ArrangementViewModel by viewModels { com.weaudio.pro.arrangement.ArrangementViewModel.factory() }
     private lateinit var focus: AudioFocusController
 
     private val inputListener = object : InputManager.InputDeviceListener {
@@ -74,8 +75,8 @@ class MainActivity : ComponentActivity() {
         focus = AudioFocusController(this) { event ->
             when (event) {
                 FocusEvent.GAINED -> audio.endInterruption("focus")
-                FocusEvent.LOST_TRANSIENT -> audio.beginInterruption("focus")
-                FocusEvent.LOST -> { audio.pause(); focus.abandon() }
+                FocusEvent.LOST_TRANSIENT -> { arrangement.onAudioInterrupted(); audio.beginInterruption("focus") }
+                FocusEvent.LOST -> { arrangement.onAudioInterrupted(); audio.pause(); focus.abandon() }
             }
         }
 
@@ -87,6 +88,7 @@ class MainActivity : ComponentActivity() {
                 refreshKeyboardState()
             }
             override fun onStop(owner: LifecycleOwner) {
+                arrangement.onAudioInterrupted()   // transport pauses with the app (position kept, no auto-resume)
                 audio.beginInterruption("background")
                 drums.setWindowFocused(false)
                 (getSystemService(Context.INPUT_SERVICE) as InputManager).unregisterInputDeviceListener(inputListener)
@@ -107,8 +109,12 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        arrangement.ensureAudio = { val e = audio.state.value.engine; if (e != EngineState.RUNNING && e != EngineState.STARTING) audio.play() }
+        arrangement.engineRunning = { audio.state.value.engine == EngineState.RUNNING }
+        // Real native transport position, polled only while the UI is visible.
+        lifecycleScope.launch { repeatOnLifecycle(Lifecycle.State.STARTED) { arrangement.pollLoop() } }
         audio.initialize()
-        setContent { WeAudioTheme { WeAudioApp(audio, drums) } }
+        setContent { WeAudioTheme { WeAudioApp(audio, drums, arrangement) } }
     }
 
     private companion object {

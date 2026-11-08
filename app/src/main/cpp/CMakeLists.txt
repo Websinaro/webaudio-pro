@@ -10,6 +10,7 @@ set(WA_ENGINE_SOURCES
     engine/AudioClock.cpp
     engine/AudioProcessor.cpp
     engine/MasterOutput.cpp
+    engine/Sequencer.cpp
     sampler/SampleDecoder.cpp
     sampler/SampleRateConverter.cpp
     sampler/DrumSampler.cpp)
@@ -43,6 +44,12 @@ else()
     target_include_directories(drum_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_compile_options(drum_tests PRIVATE -Wall -Wextra)
     add_test(NAME drum_tests COMMAND drum_tests)
+    add_executable(sequencer_tests tests/sequencer_tests.cpp ${WA_ENGINE_SOURCES})
+    target_include_directories(sequencer_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_compile_options(sequencer_tests PRIVATE -Wall -Wextra)
+    add_test(NAME sequencer_tests COMMAND sequencer_tests)
+    set_tests_properties(sequencer_tests PROPERTIES ENVIRONMENT "WA_KIT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/../assets/kits")
+    target_link_libraries(sequencer_tests PRIVATE pthread)
     set_tests_properties(drum_tests PROPERTIES ENVIRONMENT "WA_KIT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/../assets/kits")
     target_link_libraries(drum_tests PRIVATE pthread)
 endif()

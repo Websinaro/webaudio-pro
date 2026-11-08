@@ -13,7 +13,8 @@ oboe::DataCallbackResult AudioCallback::onAudioReady(oboe::AudioStream* stream, 
         return oboe::DataCallbackResult::Continue;
     }
     processor_.render(out, numFrames, channels);   // test tone (overwrites)
-    drums_.render(out, numFrames, channels);        // drum voices (adds)
+    const int32_t nHits = sequencer_.process(numFrames, stream->getSampleRate(), hits_, Sequencer::kMaxHitsPerBlock);
+    drums_.renderWithHits(out, numFrames, channels, hits_, nHits);   // pads + sequenced hits at exact offsets (adds)
     master_.process(out, numFrames, channels);
     clock_.advance(numFrames);
     return oboe::DataCallbackResult::Continue;
