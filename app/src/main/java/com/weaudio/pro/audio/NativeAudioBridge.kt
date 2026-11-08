@@ -22,4 +22,15 @@ internal object NativeAudioBridge {
     external fun getPeakLevel(): Float
     external fun getDiagnostics(): String
     external fun getLastError(): String
+
+    // Drum sampler (cpp/jni/NativeAudioBridge.cpp)
+    external fun drumLoadSample(slot: Int, wav: ByteArray): String
+    external fun drumUnloadSample(slot: Int)
+    external fun drumTrigger(slot: Int, velocity: Float): Boolean
+    external fun drumStopAll()
+    external fun drumSetVolume(slot: Int, volume: Float)
+    external fun drumSetPitch(slot: Int, semitones: Float)
+    external fun drumSetMuted(slot: Int, muted: Boolean)
+    external fun drumIsLoaded(slot: Int): Boolean
+    external fun drumActiveVoices(): Int
 }

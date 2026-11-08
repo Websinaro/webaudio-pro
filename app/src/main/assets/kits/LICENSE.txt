@@ -1,0 +1,4 @@
+Bundled drum kits: "Studio Synth" and "Dry Punch"
+Source: synthesised from scratch by tools/generate_kit.py in this repository (noise, sine sweeps,
+biquad filters). No third-party recordings or sample packs are used.
+License: CC0 1.0 Universal (public domain dedication) - https://creativecommons.org/publicdomain/zero/1.0/

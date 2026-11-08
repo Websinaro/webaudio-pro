@@ -12,7 +12,8 @@ oboe::DataCallbackResult AudioCallback::onAudioReady(oboe::AudioStream* stream, 
         std::memset(audioData, 0, static_cast<size_t>(numFrames) * stream->getBytesPerFrame());
         return oboe::DataCallbackResult::Continue;
     }
-    processor_.render(out, numFrames, channels);
+    processor_.render(out, numFrames, channels);   // test tone (overwrites)
+    drums_.render(out, numFrames, channels);        // drum voices (adds)
     master_.process(out, numFrames, channels);
     clock_.advance(numFrames);
     return oboe::DataCallbackResult::Continue;

@@ -18,12 +18,8 @@ class StudioUiTest {
         rule.onNodeWithText("NOT SAVED").assertIsDisplayed()
         listOf("transport_restart", "transport_play", "transport_pause", "transport_stop", "engine_status")
             .forEach { rule.onNodeWithTag(it).assertIsDisplayed() }
-        rule.onNodeWithText("Arrangement is empty").assertIsDisplayed()
-    }
-
-    @Test fun addLayerIsDisabledAndMarkedFuture() {
-        rule.onNodeWithText("Available in Phase 3").assertIsDisplayed()
-        rule.onNodeWithText("+ ADD LAYER").assertIsDisplayed()
+        rule.onNodeWithTag("pad_kick").assertIsDisplayed()
+        rule.onNodeWithTag("samples_status").assertIsDisplayed()
     }
 
     @Test fun pauseAndStopAreDisabledBeforePlayback() {
@@ -36,9 +32,9 @@ class StudioUiTest {
         rule.onNodeWithTag("nav_mixer").performClick()
         rule.onNodeWithText("Coming in Phase 4").assertIsDisplayed()
         rule.onNodeWithTag("nav_sounds").performClick()
-        rule.onNodeWithText("Coming in Phase 2").assertIsDisplayed()
+        rule.onNodeWithText("DRUM KIT").assertIsDisplayed()
         rule.onNodeWithTag("nav_studio").performClick()
-        rule.onNodeWithText("Arrangement is empty").assertIsDisplayed()
+        rule.onNodeWithTag("pad_snare").assertIsDisplayed()
     }
 
     @Test fun settingsOpensDiagnosticsAndBackReturns() {

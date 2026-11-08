@@ -9,7 +9,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(WA_ENGINE_SOURCES
     engine/AudioClock.cpp
     engine/AudioProcessor.cpp
-    engine/MasterOutput.cpp)
+    engine/MasterOutput.cpp
+    sampler/SampleDecoder.cpp
+    sampler/SampleRateConverter.cpp
+    sampler/DrumSampler.cpp)
 
 if(ANDROID)
     # Oboe comes from the Maven AAR via Gradle prefab (buildFeatures.prefab = true).
@@ -36,4 +39,10 @@ else()
     target_include_directories(native_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_compile_options(native_tests PRIVATE -Wall -Wextra)
     add_test(NAME native_tests COMMAND native_tests)
+    add_executable(drum_tests tests/drum_tests.cpp ${WA_ENGINE_SOURCES})
+    target_include_directories(drum_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_compile_options(drum_tests PRIVATE -Wall -Wextra)
+    add_test(NAME drum_tests COMMAND drum_tests)
+    set_tests_properties(drum_tests PROPERTIES ENVIRONMENT "WA_KIT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/../assets/kits")
+    target_link_libraries(drum_tests PRIVATE pthread)
 endif()

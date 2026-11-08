@@ -14,7 +14,10 @@ bool AudioEngine::openStreamLocked() {
         return false;
     }
     const StreamInfo info = stream_->info();
-    if (info.sampleRate > 0) processor_.setSampleRate(info.sampleRate);
+    if (info.sampleRate > 0) {
+        processor_.setSampleRate(info.sampleRate);
+        drums_->setOutputRate(info.sampleRate);   // re-resamples loaded drum samples if the rate changed
+    }
     WA_LOGI("Stream open: %s, %d Hz, %d ch, %s, %s", info.api.c_str(), info.sampleRate,
             info.channelCount, info.performanceMode.c_str(), info.sharingMode.c_str());
     return true;
@@ -31,7 +34,7 @@ bool AudioEngine::initialize() {
     if (initialized_) return true;
     failed_ = false;
     lastError_.clear();
-    callback_ = std::make_shared<AudioCallback>(processor_, master_, clock_,
+    callback_ = std::make_shared<AudioCallback>(processor_, *drums_, master_, clock_,
                                                 std::weak_ptr<StreamErrorListener>(weak_from_this()));
     stream_ = std::make_unique<AudioStreamManager>(callback_);
     if (!openStreamLocked()) {
@@ -64,6 +67,7 @@ bool AudioEngine::startLocked() {
     }
     failed_ = false;
     intent_ = Intent::Playing;
+    drums_->setActive(true);
     return true;
 }
 
@@ -81,6 +85,7 @@ bool AudioEngine::pause() {
         return false;
     }
     intent_ = Intent::Paused;
+    drums_->setActive(false);
     if (!stream_->isOpen()) return true;
     if (stream_->pause() != oboe::Result::OK) {
         // Pause is not supported on every back-end: fall back to stop, keep logical Paused.
@@ -100,6 +105,7 @@ bool AudioEngine::stop() {
         return false;
     }
     intent_ = Intent::Idle;
+    drums_->setActive(false);
     if (stream_->isOpen() && stream_->stop() != oboe::Result::OK) {
         fail("Unable to stop the audio stream");
         return false;
@@ -110,6 +116,7 @@ bool AudioEngine::stop() {
 
 void AudioEngine::release() {
     std::lock_guard<std::mutex> lock(mutex_);
+    drums_->setActive(false);
     if (callback_) callback_->detach();
     if (stream_) stream_->close();
     stream_.reset();
@@ -127,6 +134,7 @@ void AudioEngine::onStreamDisconnected(oboe::Result error) {
     if (!initialized_ || !stream_) return;
     WA_LOGW("Stream disconnected: %s", oboe::convertToText(error));
     recovering_ = true;
+    drums_->setActive(false);
     stream_->close();
     ++reconnectCount_;
     const bool reopened = openStreamLocked();

@@ -13,6 +13,8 @@ namespace {
 
 std::mutex gMutex;
 std::shared_ptr<weaudio::AudioEngine> gEngine;
+// Process-wide sampler: loaded kits survive engine release/re-initialisation.
+std::shared_ptr<weaudio::DrumSampler> gDrums = std::make_shared<weaudio::DrumSampler>();
 
 std::shared_ptr<weaudio::AudioEngine> engine() {
     std::lock_guard<std::mutex> lock(gMutex);
@@ -29,7 +31,7 @@ JNI_FN(jint, initializeEngine)(JNIEnv*, jobject) {
     std::shared_ptr<weaudio::AudioEngine> e;
     {
         std::lock_guard<std::mutex> lock(gMutex);
-        if (!gEngine) gEngine = std::make_shared<weaudio::AudioEngine>();
+        if (!gEngine) gEngine = std::make_shared<weaudio::AudioEngine>(gDrums);
         e = gEngine;
     }
     return e->initialize() ? 0 : 1;
@@ -78,3 +80,26 @@ JNI_FN(jstring, getLastError)(JNIEnv* env, jobject) {
     auto e = engine();
     return toJString(env, e ? e->lastError() : std::string());
 }
+
+// ---- drum sampler (slot = instrument index 0..11) --------------------------------------
+// Returns "" on success, otherwise the error text. Decoding/resampling run on the calling
+// (non-realtime) thread.
+JNI_FN(jstring, drumLoadSample)(JNIEnv* env, jobject, jint slot, jbyteArray data) {
+    if (data == nullptr) return toJString(env, "No data");
+    const jsize len = env->GetArrayLength(data);
+    jbyte* bytes = env->GetByteArrayElements(data, nullptr);
+    if (bytes == nullptr) return toJString(env, "Out of memory");
+    const std::string err = gDrums->loadSample(slot, reinterpret_cast<const uint8_t*>(bytes), static_cast<size_t>(len));
+    env->ReleaseByteArrayElements(data, bytes, JNI_ABORT);
+    return toJString(env, err);
+}
+JNI_FN(void, drumUnloadSample)(JNIEnv*, jobject, jint slot) { gDrums->unloadSample(slot); }
+JNI_FN(jboolean, drumTrigger)(JNIEnv*, jobject, jint slot, jfloat velocity) {
+    return gDrums->trigger(slot, velocity) ? JNI_TRUE : JNI_FALSE;
+}
+JNI_FN(void, drumStopAll)(JNIEnv*, jobject) { gDrums->stopAll(); }
+JNI_FN(void, drumSetVolume)(JNIEnv*, jobject, jint slot, jfloat v) { gDrums->setVolume(slot, v); }
+JNI_FN(void, drumSetPitch)(JNIEnv*, jobject, jint slot, jfloat st) { gDrums->setPitchSemitones(slot, st); }
+JNI_FN(void, drumSetMuted)(JNIEnv*, jobject, jint slot, jboolean m) { gDrums->setMuted(slot, m == JNI_TRUE); }
+JNI_FN(jboolean, drumIsLoaded)(JNIEnv*, jobject, jint slot) { return gDrums->isLoaded(slot) ? JNI_TRUE : JNI_FALSE; }
+JNI_FN(jint, drumActiveVoices)(JNIEnv*, jobject) { return gDrums->activeVoices(); }

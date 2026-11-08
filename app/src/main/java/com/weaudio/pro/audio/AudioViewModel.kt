@@ -23,7 +23,7 @@ data class AudioUiState(
     val engine: EngineState = EngineState.UNINITIALIZED,
     val diagnostics: AudioDiagnostics = AudioDiagnostics(),
     val error: String? = null,
-    val toneEnabled: Boolean = true,
+    val toneEnabled: Boolean = false,   // Phase 2: the Studio plays drums; the diagnostics tone is opt-in
     val toneFrequency: Float = 440f,
     val masterVolume: Float = 0.8f,
     val deviceInfo: Map<String, String> = emptyMap(),

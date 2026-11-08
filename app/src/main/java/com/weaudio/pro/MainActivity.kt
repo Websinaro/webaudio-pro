@@ -1,6 +1,12 @@
 package com.weaudio.pro
 
+import android.content.Context
+import android.hardware.input.InputManager
 import android.os.Bundle
+import android.view.InputDevice
+import android.view.KeyEvent
+import com.weaudio.pro.audio.keyboard.KeyInput
+import com.weaudio.pro.studio.drum.DrumViewModel
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -22,7 +28,44 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val audio: AudioViewModel by viewModels { AudioViewModel.factory(applicationContext) }
+    private val drums: DrumViewModel by viewModels { DrumViewModel.factory(applicationContext) }
     private lateinit var focus: AudioFocusController
+
+    private val inputListener = object : InputManager.InputDeviceListener {
+        override fun onInputDeviceAdded(deviceId: Int) = refreshKeyboardState()
+        override fun onInputDeviceChanged(deviceId: Int) = refreshKeyboardState()
+        override fun onInputDeviceRemoved(deviceId: Int) {
+            drums.onKeyboardDeviceRemoved(deviceId)   // release held keys of an unplugged keyboard
+            refreshKeyboardState()
+        }
+    }
+
+    private fun refreshKeyboardState() {
+        val connected = InputDevice.getDeviceIds().any { id ->
+            InputDevice.getDevice(id)?.let { !it.isVirtual && it.keyboardType == InputDevice.KEYBOARD_TYPE_ALPHABETIC &&
+                (it.sources and InputDevice.SOURCE_KEYBOARD) == InputDevice.SOURCE_KEYBOARD } == true
+        }
+        drums.setKeyboardConnected(connected)
+    }
+
+    // Physical keyboard -> drum sampler. Runs before Compose sees the event; consumed only when a
+    // mapped drum key is pressed while the Studio is focused (otherwise normal key handling continues).
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val device = event.device
+        val physical = device != null && !device.isVirtual && (event.source and InputDevice.SOURCE_KEYBOARD) == InputDevice.SOURCE_KEYBOARD
+        val input = KeyInput(
+            keyCode = event.keyCode, isDown = event.action == KeyEvent.ACTION_DOWN, repeatCount = event.repeatCount,
+            deviceId = event.deviceId, isPhysicalKeyboard = physical,
+            hasShortcutModifier = event.isCtrlPressed || event.isAltPressed || event.isMetaPressed,
+        )
+        if (event.action != KeyEvent.ACTION_MULTIPLE && drums.onKeyEvent(input)) return true
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        drums.setWindowFocused(hasFocus)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,8 +81,16 @@ class MainActivity : ComponentActivity() {
 
         // Backgrounding releases the output (pause); returning resumes only if it was playing.
         lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onStop(owner: LifecycleOwner) = audio.beginInterruption("background")
-            override fun onStart(owner: LifecycleOwner) = audio.endInterruption("background")
+            override fun onStart(owner: LifecycleOwner) {
+                audio.endInterruption("background")
+                (getSystemService(Context.INPUT_SERVICE) as InputManager).registerInputDeviceListener(inputListener, null)
+                refreshKeyboardState()
+            }
+            override fun onStop(owner: LifecycleOwner) {
+                audio.beginInterruption("background")
+                drums.setWindowFocused(false)
+                (getSystemService(Context.INPUT_SERVICE) as InputManager).unregisterInputDeviceListener(inputListener)
+            }
             override fun onDestroy(owner: LifecycleOwner) { if (isFinishing) audio.shutdown() }
         })
 
@@ -57,7 +108,7 @@ class MainActivity : ComponentActivity() {
         }
 
         audio.initialize()
-        setContent { WeAudioTheme { WeAudioApp(audio) } }
+        setContent { WeAudioTheme { WeAudioApp(audio, drums) } }
     }
 
     private companion object {

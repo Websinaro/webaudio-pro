@@ -30,6 +30,8 @@ import com.weaudio.pro.audio.EngineState
 import com.weaudio.pro.navigation.Destination
 import com.weaudio.pro.navigation.ROUTE_DIAGNOSTICS
 import com.weaudio.pro.project.ProjectViewModel
+import com.weaudio.pro.studio.drum.DrumViewModel
+import com.weaudio.pro.studio.drum.SoundsScreen
 import com.weaudio.pro.ui.components.engineStatusColor
 import com.weaudio.pro.ui.diagnostics.DiagnosticsScreen
 import com.weaudio.pro.ui.projects.ProjectsScreen
@@ -39,33 +41,59 @@ import com.weaudio.pro.ui.theme.DawType
 import com.weaudio.pro.ui.upcoming.UpcomingScreen
 
 @Composable
-fun WeAudioApp(audio: AudioViewModel) {
+fun WeAudioApp(audio: AudioViewModel, drums: DrumViewModel) {
     val nav = rememberNavController()
     val projectVm: ProjectViewModel = viewModel()
     val project by projectVm.project.collectAsStateWithLifecycle()
     val route = nav.currentBackStackEntryAsState().value?.destination?.route
     val onDiagnostics = route == ROUTE_DIAGNOSTICS
 
-    Column(Modifier.fillMaxSize().background(DawColors.Panel).statusBarsPadding().navigationBarsPadding()) {
-        if (onDiagnostics) {
-            SimpleTopBar("Audio settings & diagnostics") { nav.popBackStack() }
-        } else {
-            StudioTopBar(project.name, project.isSaved, nav, audio)
-        }
-        Box(Modifier.weight(1f)) {
-            NavHost(nav, startDestination = Destination.Studio.route) {
-                composable(Destination.Studio.route) { StudioScreen(project, audio) }
-                composable(Destination.Sounds.route) {
-                    UpcomingScreen("Sounds", 2, "Drum sampler, sample library and live triggering.")
+    BoxWithConstraints(Modifier.fillMaxSize().background(DawColors.Panel).statusBarsPadding().navigationBarsPadding()) {
+        // Landscape DAW workspace when the window is wider than tall; phone-style portrait otherwise.
+        val landscape = maxWidth > maxHeight
+        Row(Modifier.fillMaxSize()) {
+            if (landscape && !onDiagnostics) {
+                NavRail(route, nav)
+                Box(Modifier.width(1.dp).fillMaxHeight().background(DawColors.Separator))
+            }
+            Column(Modifier.weight(1f).fillMaxHeight()) {
+                if (onDiagnostics) {
+                    SimpleTopBar("Audio settings & diagnostics") { nav.popBackStack() }
+                } else {
+                    StudioTopBar(project.name, project.isSaved, nav, audio)
                 }
-                composable(Destination.Mixer.route) {
-                    UpcomingScreen("Mixer", 4, "Channel strips, EQ, reverb, delay and WAV rendering.")
+                Box(Modifier.weight(1f)) {
+                    NavHost(nav, startDestination = Destination.Studio.route) {
+                        composable(Destination.Studio.route) { StudioScreen(project, audio, drums, landscape) }
+                        composable(Destination.Sounds.route) { SoundsScreen(drums) }
+                        composable(Destination.Mixer.route) {
+                            UpcomingScreen("Mixer", 4, "Channel strips, EQ, reverb, delay and WAV rendering.")
+                        }
+                        composable(Destination.Projects.route) { ProjectsScreen(projectVm) }
+                        composable(ROUTE_DIAGNOSTICS) { DiagnosticsScreen(audio) }
+                    }
                 }
-                composable(Destination.Projects.route) { ProjectsScreen(projectVm) }
-                composable(ROUTE_DIAGNOSTICS) { DiagnosticsScreen(audio) }
+                if (!onDiagnostics && !landscape) BottomBar(route, nav)
             }
         }
-        if (!onDiagnostics) BottomBar(route, nav)
+    }
+}
+
+/** Landscape navigation: a slim rail replaces the bottom bar so the workspace keeps its height. */
+@Composable
+private fun NavRail(currentRoute: String?, nav: NavHostController) {
+    Column(Modifier.width(64.dp).fillMaxHeight().background(DawColors.Panel), verticalArrangement = Arrangement.Center) {
+        Destination.entries.forEach { dest ->
+            val selected = currentRoute == dest.route
+            Column(
+                Modifier.weight(1f).fillMaxWidth().clickable { if (!selected) nav.navigateTop(dest.route) }.testTag("nav_${dest.route}"),
+                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+            ) {
+                Box(Modifier.width(24.dp).height(2.dp).background(if (selected) DawColors.Accent else DawColors.Panel))
+                Spacer(Modifier.height(6.dp))
+                Text(dest.label.uppercase(), style = DawType.Label.copy(fontSize = 9.sp), color = if (selected) DawColors.TextPrimary else DawColors.TextSecondary, maxLines = 1)
+            }
+        }
     }
 }
 

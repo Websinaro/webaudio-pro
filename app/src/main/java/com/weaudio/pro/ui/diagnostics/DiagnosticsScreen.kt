@@ -57,6 +57,15 @@ fun DiagnosticsScreen(audio: AudioViewModel) {
         KeyValueRow("Buffer duration", d.bufferMillis())
         KeyValueRow("Underruns (xruns)", d["xRuns"])
 
+        SectionHeader("Drum sampler")
+        KeyValueRow("Samples loaded", d["drumSlotsLoaded"] + " / 12")
+        KeyValueRow("Active voices", d["drumActiveVoices"], modifier = Modifier.testTag("diag_drum_voices"))
+        KeyValueRow("Polyphony limit", d["drumPolyphonyLimit"])
+        KeyValueRow("Hits triggered", d["drumTriggers"], modifier = Modifier.testTag("diag_drum_triggers"))
+        KeyValueRow("Voices stolen", d["drumVoiceSteals"])
+        KeyValueRow("Dropped triggers", d["drumDroppedTriggers"])
+        KeyValueRow("Sample conversion rate", d.withUnit("drumSampleRate", "Hz"))
+
         SectionHeader("Device")
         KeyValueRow("Stream device id", d["deviceId"])
         s.deviceInfo.forEach { (k, v) -> KeyValueRow(k, v) }

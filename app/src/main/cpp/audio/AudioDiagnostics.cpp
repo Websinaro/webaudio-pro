@@ -34,6 +34,13 @@ std::string buildDiagnostics(AudioEngine& e) {
     add("reconnects", std::to_string(e.reconnectCount_));
     add("toneEnabled", e.processor_.toneEnabled() ? "1" : "0");
     add("toneFrequency", std::to_string(e.processor_.toneFrequency()));
+    add("drumSlotsLoaded", std::to_string(e.drums_->loadedCount()));
+    add("drumActiveVoices", std::to_string(e.drums_->activeVoices()));
+    add("drumPolyphonyLimit", std::to_string(DrumSampler::kMaxPolyphony));
+    add("drumTriggers", std::to_string(e.drums_->triggerCount()));
+    add("drumVoiceSteals", std::to_string(e.drums_->stealCount()));
+    add("drumDroppedTriggers", std::to_string(e.drums_->droppedCount()));
+    add("drumSampleRate", std::to_string(e.drums_->outputRate()));
     add("fallback", e.stream_ ? (e.stream_->fallbackNote().empty() ? "None" : e.stream_->fallbackNote()) : "Unavailable");
     add("lastError", e.lastError_.empty() ? "None" : e.lastError_);
     return out;
