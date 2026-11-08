@@ -1,0 +1,45 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: >-
+            platforms;android-35
+            build-tools;35.0.0
+            cmake;3.22.1
+            ndk;27.0.12077973
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Run native C++ tests
+        run: |
+          cmake -S app/src/main/cpp -B build/native -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/native
+          ctest --test-dir build/native --output-on-failure
+
+      - name: Run Kotlin unit tests
+        run: ./gradlew testDebugUnitTest
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WeAudioPro-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
