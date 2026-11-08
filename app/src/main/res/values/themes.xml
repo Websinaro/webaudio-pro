@@ -1,0 +1,8 @@
+<resources>
+    <style name="Theme.WeAudioPro" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#FF141517</item>
+        <item name="android:statusBarColor">#FF0B0C0D</item>
+        <item name="android:navigationBarColor">#FF0B0C0D</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
