@@ -140,7 +140,9 @@ private fun Ruler(vm: ArrangementViewModel, ui: ArrangementUiState, contentDp: F
         while (tick <= total) {
             val x = vp.tickToDp(tick).dp.toPx()
             drawLine(DawColors.TextSecondary, Offset(x, size.height * 0.35f), Offset(x, size.height), 1f)
-            drawText(measurer, "$bar", Offset(x + 3.dp.toPx(), 1.dp.toPx()), labelStyle)
+            if (x + 24.dp.toPx() < size.width) {   // fixed label box: never lay text out past the canvas edge (negative maxWidth crash)
+                drawText(measurer, "$bar", Offset(x + 3.dp.toPx(), 1.dp.toPx()), labelStyle, size = Size(24.dp.toPx(), 14.dp.toPx()))
+            }
             if (vp.dpPerBeat >= 28f) { var b = beatTicks; while (b < barTicks) {
                 val bx = vp.tickToDp(tick + b).dp.toPx(); drawLine(DawColors.Separator, Offset(bx, size.height * 0.65f), Offset(bx, size.height), 1f); b += beatTicks } }
             tick += barTicks; bar++
